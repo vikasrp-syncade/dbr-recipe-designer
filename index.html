@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBR Recipe Designer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#e2e2e2;--panel:#fff;--border:#000;--blue:#2860c0;--green:#1a8a1a;--red:#cc0000;--teal:#00a0a0;--ybar:#e0b020;--tbar:#00c0c0;--gbar:#b0b0b0;--text:#1a1a1a;--muted:#666;--popbg:#bcd4ee;--actbg:#b8d2f0;--actbd:#88a8d0;--f:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:var(--f);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* DROP PAGE */
+.dp{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;padding:40px}
+.dz{width:540px;border:3px dashed #999;border-radius:16px;padding:50px 40px;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+.dz:hover,.dz.ov{border-color:var(--blue);background:#f0f6ff;transform:scale(1.01)}
+.dz h2{font-size:20px;color:#333;margin-bottom:6px}.dz p{font-size:13px;color:var(--muted);margin-bottom:14px}
+.dz .di{font-size:48px;margin-bottom:10px;opacity:.6}
+.dz .db{display:inline-block;background:var(--blue);color:#fff;padding:9px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--f)}.dz .db:hover{background:#1a4ea0}
+.dz .dor{font-size:11px;color:#aaa;margin:8px 0}
+.dh{margin-top:18px;font-size:11px;color:#999;max-width:460px;text-align:center;line-height:1.5}.de{color:var(--red);font-size:13px;margin-top:12px;font-weight:600}
+
+/* MAIN APP */
+.app{display:none}
+.tn{background:#2a2a2a;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:7px 16px;font-size:13px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.tn-t{font-weight:700;font-size:13px;letter-spacing:.3px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tn-r{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pl{background:rgba(255,255,255,.12);padding:3px 11px;border-radius:4px;font-size:11px;font-weight:600}
+.nb{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 10px;cursor:pointer;border-radius:4px;font-size:10px;font-weight:600;transition:background .15s;font-family:var(--f)}.nb:hover{background:rgba(255,255,255,.2)}.nb:disabled{opacity:.25;cursor:default}
+.nb.exp{background:rgba(80,180,80,.25);border-color:rgba(80,180,80,.5)}.nb.exp:hover{background:rgba(80,180,80,.45)}
+
+/* TABS */
+.main-tabs{background:#1e1e1e;display:flex;border-bottom:2px solid #444}
+.mtab{padding:9px 28px;font-size:13px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;font-family:var(--f)}
+.mtab:hover{color:#ccc}.mtab.on{color:#5aacff;border-bottom-color:#5aacff;background:rgba(90,172,255,.08)}
+.mtab .badge{font-size:9px;background:rgba(255,255,255,.15);padding:1px 6px;border-radius:8px;margin-left:6px}
+
+/* FLOW VIEW */
+.flow-view{display:none;background:#0f1117;min-height:calc(100vh - 90px);padding:0;position:relative}
+.flow-view.on{display:block}
+.flow-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#1a1d27;border-bottom:1px solid #2e3348}
+.flow-toolbar .fbtn{font-family:var(--f);font-size:11px;padding:5px 12px;border-radius:4px;border:1px solid #2e3348;background:#242836;color:#e2e4ec;cursor:pointer}.flow-toolbar .fbtn:hover{background:#2e3348;border-color:#6c8aff}
+.fv-toggle{display:flex;border:1px solid #2e3348;border-radius:5px;overflow:hidden}
+.fv-btn{font-family:var(--f);font-size:11px;font-weight:600;padding:5px 14px;border:none;cursor:pointer;background:#242836;color:#8b8fa8;transition:all .12s}
+.fv-btn:hover{background:#2e3348;color:#e2e4ec}
+.fv-btn.on{background:#6c8aff;color:#fff}
+.flow-stats{font-size:11px;color:#8b8fa8;font-family:'Consolas',monospace;margin-left:auto}
+.flow-hint{font-size:10px;color:#6c8aff;margin-left:12px}
+#mermaidWrap{padding:24px;display:flex;justify-content:center;overflow:auto;min-height:500px}
+.mermaid{background:transparent!important}
+.mermaid .node{cursor:pointer}
+.mermaid .node:hover .label-container,.mermaid .node:hover rect,.mermaid .node:hover polygon,.mermaid .node:hover circle{filter:brightness(1.2)}
+
+/* SCREEN VIEW */
+.screen-view{display:none}
+.screen-view.on{display:block}
+.screen-nav{display:flex;align-items:center;gap:6px;padding:5px 12px;background:#222;flex-wrap:wrap}
+.ts{background:#222;padding:5px 12px;display:flex;gap:4px;overflow-x:auto;align-items:center}
+.tm{min-width:36px;height:26px;background:#444;border:2px solid transparent;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#aaa;cursor:pointer;flex-shrink:0;transition:all .12s}.tm:hover{background:#555;color:#fff}.tm.on{border-color:#5aacff;background:#3a506a;color:#fff;font-weight:700}
+.ly{display:grid;grid-template-columns:1fr 300px;max-width:1460px;margin:12px auto;min-height:calc(100vh - 140px)}
+
+/* WIREFRAME PANEL STYLES */
+.pn{border:2px solid var(--border);background:var(--panel);display:flex;flex-direction:column;min-height:560px}
+.ppb{display:flex;align-items:center;background:#f2f2f2;border-bottom:1px solid #ccc;padding:5px 10px;gap:10px;min-height:36px}
+.pn-n{width:24px;height:24px;border:1px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#333;flex-shrink:0}
+.pn-i{flex:1}.pn-i .t{font-weight:600;font-size:12px;color:#222}.pn-i .s{font-size:10px;color:#888}
+.ttb{display:flex;align-items:center;padding:4px 10px;gap:10px;border-bottom:1px solid #eee;min-height:28px}
+.ti{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;cursor:pointer}
+.ttr{margin-left:auto;display:flex;gap:5px}
+.bc{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;transition:transform .1s}.bc:hover{transform:scale(1.08)}
+.eb{background:#fff;color:var(--red);text-align:center;padding:4px 10px;font-size:11px;text-decoration:underline;cursor:pointer;border-bottom:1px solid #eee}
+.ct{flex:1;padding:12px 16px;display:flex;flex-direction:column;position:relative}
+.cb{position:absolute;left:0;top:0;bottom:0;width:5px}.cb.yellow{background:var(--ybar)}.cb.teal{background:var(--tbar)}.cb.gray{background:var(--gbar)}
+.oi{border-collapse:collapse;margin-bottom:12px;font-size:11px}.oi td{border:1px solid #666;padding:3px 10px;background:#fff}.oi .lb{font-weight:600;min-width:120px;background:#f8f8f8}
+.hr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.prn{color:var(--blue);font-size:14px;font-weight:700}
+.phb{text-align:right}.phb .bos{color:var(--red);font-weight:700;font-size:10px;text-decoration:underline;cursor:pointer;display:block}.phb .haz-badge{color:#b45309;font-weight:700;font-size:10px;text-decoration:underline;cursor:pointer;display:block}.phb .sop-badge{color:var(--blue);font-weight:700;font-size:10px;text-decoration:underline;cursor:pointer;display:block}.phb .pid{color:var(--blue);font-size:11px;font-weight:600}
+.ins{font-size:12px;line-height:1.5;margin-bottom:6px}.ins.b{font-weight:700}
+.sf{background:#ffff00;padding:4px 10px;font-weight:700;font-size:12px;margin-bottom:8px}
+.hzd{font-size:11px;margin-bottom:8px}.hzd .ht{font-weight:700}
+.aii{text-align:center;padding:28px 18px}.aii .al{color:var(--blue);text-decoration:underline;font-size:12px;margin-bottom:8px}.aii .at{font-size:12px}
+.dt{border-collapse:collapse;margin:8px 0;font-size:11px}.dt th{background:#333;color:#fff;padding:4px 10px;text-align:left;font-weight:600;border:1px solid #333}.dt td{padding:4px 10px;border:1px solid #888;background:#fff}.dt .restricted{color:var(--red);font-weight:600}.dt .unrestricted{color:var(--green);font-weight:600}
+.pps{margin-top:14px}.ppsl{color:var(--teal);font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.ppsl .pi{width:18px;height:18px;border:2px solid var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal)}
+.ppr{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}.ppr .ppl{font-weight:600;min-width:200px;text-align:right}.ppr .ppl .rq{color:var(--red)}
+.ppi{border:1px solid #aaa;padding:4px 7px;min-width:280px;font-size:12px;font-family:var(--f);background:#faf0f0}
+.ppsel{border:1px solid #aaa;padding:4px 7px;min-width:280px;font-size:12px;font-family:var(--f);background:#fff;cursor:pointer}
+.sgs{margin-top:auto;padding-top:12px}.sgsl{color:#b8860b;font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer}.sgsl:hover{color:#8a6800}
+.sgsl .si{width:18px;height:18px;background:#daa520;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px}
+.sgr{display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:2px;cursor:pointer}.sgr .rl{font-weight:700}
+.sgg{width:16px;height:16px;border-radius:3px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px}
+.ebox{border:2px solid #000;padding:24px 44px;text-align:center;margin:auto}.ebox .et{font-weight:700;font-size:14px}.ebox .es{font-size:12px;margin-top:5px}
+.hb{width:40px;height:40px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;margin:14px auto 0}
+
+/* SIDEBAR */
+.ssd{display:flex;flex-direction:column}
+.sx{border:2px solid #000;background:#fff;padding:8px 10px}.sx+.sx{border-top:none}
+.sx .sl{font-weight:700;font-size:11px}.sx .sv{color:var(--blue);font-weight:600;font-size:11px}.sx .stt{font-size:10px;line-height:1.3;margin-top:2px;white-space:pre-line}
+.ax{border:2px solid #000;background:#fff;padding:8px 10px;flex:1;border-top:none}
+.axh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.axh .sl{font-weight:700;font-size:11px}
+.hn{width:24px;height:24px;background:var(--blue);color:#fff;border:none;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px}
+.aai{display:flex;align-items:center;gap:4px;margin-bottom:5px;cursor:pointer;transition:transform .08s}.aai:hover{transform:translateX(2px)}
+.aai .al{background:var(--actbg);border:1px solid var(--actbd);padding:4px 8px;font-size:10px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aai .ad{background:var(--actbg);border:1px solid var(--actbd);width:18px;height:26px;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
+.aai .ap{font-weight:700;color:#555;font-size:13px;flex-shrink:0}
+.aai .aw{width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid var(--blue);flex-shrink:0}
+.aas{font-weight:700;font-size:10px;margin:5px 0 3px 0}
+.ari{display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 8px;background:#fff4e6;border:1px solid #e8a020;border-radius:4px;font-size:10px;cursor:pointer}.ari:hover{background:#ffe8c0}
+.ari .ar-icon{width:20px;height:20px;background:#e8a020;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+.ari .ar-label{font-weight:600;color:#8a6000}.ari .ar-target{color:var(--blue);font-weight:700;margin-left:auto}
+.eb-return{font-size:9px;color:#fff;background:var(--blue);padding:1px 7px;border-radius:3px;margin-left:6px;font-weight:600;cursor:pointer}.eb-return:hover{background:#1a4ea0}
+.flow-link{font-size:9px;color:#fff;background:#6c8aff;padding:2px 8px;border-radius:3px;cursor:pointer;font-weight:600;margin-left:8px}.flow-link:hover{background:#4a6add}
+
+/* POPUPS */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:center;justify-content:center}.ov.on{display:flex}
+.pop-s{background:#fff;border:3px solid #444;width:380px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.pop-s .sh{background:var(--popbg);text-align:center;padding:20px 18px 12px}
+.pop-s .sh .ic{font-size:28px;color:#556;margin-bottom:3px}.pop-s .sh .ttt{font-weight:700;font-size:17px;color:#333}
+.pop-s .sh .ro{font-size:11px;font-weight:700;color:#555;letter-spacing:1px;margin-top:2px}
+.pop-s .sh hr{border:none;border-top:1px solid #8aacd0;margin:8px 22px 0}
+.pop-s .sdd{background:var(--popbg);text-align:center;font-size:11px;color:#556;padding:6px 24px 14px;line-height:1.4}
+.pop-s .sff{padding:14px 24px 6px}
+.pop-s .fl{font-size:9px;color:#888;font-weight:600;margin-bottom:2px;text-transform:uppercase}
+.pop-s .fi{width:100%;border:none;border-bottom:1px solid #bbb;background:transparent;padding:6px 0;font-size:12px;font-family:var(--f);margin-bottom:12px;outline:none}
+.pop-s .ft{width:100%;border:1px solid #bbb;background:#fafafa;padding:5px 7px;font-size:11px;font-family:var(--f);resize:vertical;min-height:44px;outline:none}
+.pop-s .sbb{display:flex;justify-content:flex-end;gap:14px;padding:12px 24px 18px}
+.pop-s .sbb button{background:none;border:none;font-size:12px;font-weight:600;cursor:pointer;color:#666;padding:3px 10px;font-family:var(--f)}.pop-s .sbb button:hover{text-decoration:underline}.pop-s .sbb .ok{color:var(--blue)}
+.pop-e{background:#f0f0f0;border:2px solid #888;width:420px;border-radius:4px;box-shadow:0 8px 32px rgba(0,0,0,.25);position:relative}
+.pop-e .eb2{color:var(--red);font-size:10px;text-decoration:underline;padding:8px 12px 4px}
+.pop-e .eeh{padding:4px 12px}.pop-e .et2{font-size:14px;color:#777;font-weight:400}.pop-e .es2{font-size:9px;color:#999}
+.pop-e .ex{position:absolute;right:8px;top:6px;cursor:pointer;font-size:14px;color:#888;background:none;border:none}
+.pop-e .ebd{border:1px solid #bbb;margin:5px 12px;padding:8px;min-height:160px;font-size:11px;background:#fafafa;overflow-y:auto;max-height:180px}
+.pop-e .ef{text-align:right;padding:6px 12px 10px}.pop-e .ef button{background:none;border:none;font-size:11px;font-weight:600;cursor:pointer;color:var(--blue);font-family:var(--f)}
+.too{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:6px 20px;border-radius:5px;font-size:11px;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none}.too.show{opacity:1}
+.lm{background:#fff;border-radius:8px;padding:16px;max-width:500px;width:92%;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.lm h3{font-size:14px;margin-bottom:8px}
+.lm-search{width:100%;padding:8px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;margin-bottom:10px;font-family:var(--f)}
+.lg{margin-bottom:12px}
+.lg-title{font-weight:700;font-size:11px;background:#f0f0f0;padding:4px 8px;margin-bottom:4px;border-radius:3px;color:#555}
+.lr{padding:6px 8px;cursor:pointer;border-bottom:1px solid #eee;font-size:11px;transition:background .1s;margin-left:8px}.lr:hover{background:#f0f5ff}.lr.cur{background:#e0ecff}
+.lr .ln{color:var(--blue);font-weight:700}.lr .lt{color:#999;font-size:9px;margin-left:4px}
+.jts{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:2px 6px}
+.jts input{background:transparent;border:none;color:#fff;width:40px;font-size:11px;outline:none;font-weight:600}
+.jts input::placeholder{color:rgba(255,255,255,.5)}
+/* REFERENCE MODALS */
+.ref-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.5);align-items:center;justify-content:center}
+.ref-modal.on{display:flex}
+.ref-box{background:#fff;border-radius:10px;width:90%;max-width:860px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.ref-hdr{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #ddd;background:#f8f8f8;border-radius:10px 10px 0 0}
+.ref-hdr h2{font-size:16px;font-weight:700;flex:1;color:#333}.ref-close{width:30px;height:30px;border:none;background:#eee;border-radius:50%;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center}.ref-close:hover{background:#ddd;color:#333}
+.ref-body{flex:1;overflow-y:auto;padding:18px}
+.ref-grp{margin-bottom:16px}
+.ref-grp-title{font-size:12px;font-weight:700;color:#fff;padding:5px 12px;border-radius:4px;margin-bottom:8px}
+.ref-row{display:flex;gap:8px;padding:5px 8px;border-bottom:1px solid #f0f0f0;font-size:12px;align-items:flex-start}
+.ref-row:hover{background:#f8f9ff}
+.ref-col{font-weight:700;color:#7030A0;min-width:28px;font-family:Consolas,monospace;font-size:11px}
+.ref-field{font-weight:700;min-width:100px;color:#333}
+.ref-desc{flex:1;color:#555;line-height:1.4}
+.ref-syntax{color:#2860c0;font-family:Consolas,monospace;font-size:11px;background:#f5f5ff;padding:2px 6px;border-radius:3px;white-space:pre-line}
+.syn-section{margin-bottom:16px}
+.syn-title{font-size:13px;font-weight:700;color:#2F5496;margin-bottom:6px;border-bottom:2px solid #2F5496;padding-bottom:3px}
+.syn-example{background:#f5f5f5;border-left:3px solid #7030A0;padding:8px 12px;margin:6px 0;font-family:Consolas,monospace;font-size:11px;line-height:1.6;color:#333;white-space:pre-line}
+.syn-note{font-size:11px;color:#666;margin:4px 0 8px;line-height:1.4}
+@media print{.tn,.ts,.too,.ov,.main-tabs,.flow-toolbar{display:none!important}.ly{margin:0;min-height:auto}.dp{display:none!important}.app{display:block!important}}
+</style>
+</head>
+<body>
+
+<!-- DROP PAGE -->
+<div class="dp" id="dp">
+  <div class="dz" id="dz">
+    <div class="di">&#9672;</div>
+    <h2>DBR Recipe Designer</h2>
+    <p>Flowcharts + Wireframes — Drop your Excel workbook here</p>
+    <div class="dor">— or —</div>
+    <button class="db" onclick="document.getElementById('fii').click()">Browse for file</button>
+    <input type="file" id="fii" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])">
+  </div>
+  <div class="dh">Supports:<br><strong>Recipe</strong> sheet (17 cols: Step_ID..Phase + UP/OP/EWI + Screen_Type..Notes + BoS/Hazard/SOP)<br>or separate <strong>Flow</strong> + <strong>Screens</strong> sheets.</div>
+  <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
+    <button class="db" style="background:#7030A0" onclick="document.getElementById('refModal').classList.add('on')">&#128214; Column Reference</button>
+    <button class="db" style="background:#1a7a1a" onclick="document.getElementById('syntaxModal').classList.add('on')">&#128221; Syntax Guide</button>
+  </div>
+  <div class="dh" style="margin-top:12px;padding:8px 16px;background:#fff;border:1px solid #ddd;border-radius:6px;font-size:11px">For bug reports or feature requests contact: <a href="mailto:phatak_vikas@network.lilly.com" style="color:var(--blue);font-weight:600">phatak_vikas@network.lilly.com</a></div>
+  <div class="de" id="de"></div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="app">
+  <div class="tn">
+    <div class="tn-t" id="nt"></div>
+    <div class="tn-r" id="screenNav" style="display:none">
+      <button class="nb" onclick="sGo(0)">&#9198;</button>
+      <button class="nb" id="bP" onclick="sNav(-1)">&#9664; Prev</button>
+      <button class="nb" id="bBk" onclick="sGoBack()" style="opacity:0.5">&#11013; Back</button>
+      <span class="pl" id="pll"></span>
+      <button class="nb" id="bN" onclick="sNav(1)">Next &#9654;</button>
+      <button class="nb" onclick="sGo(S.length-1)">&#9197;</button>
+      <div class="jts"><input id="jti" type="text" placeholder="Go #" onkeypress="if(event.key==='Enter')sDoJump()"><button class="nb" onclick="sDoJump()" style="width:28px;padding:2px 6px">&#8594;</button></div>
+      <button class="nb" onclick="openList()">&#9776;</button>
+      <button class="nb exp" onclick="exportStoryboard('html')">&#11015; HTML</button>
+      <button class="nb exp" onclick="exportStoryboard('pdf')">&#11015; PDF</button>
+      <button class="nb" onclick="switchTab('flow')" title="Show in Flow">&#9670; Flow</button>
+      <button class="nb" onclick="reload()">&#8635; New</button>
+    </div>
+    <div class="tn-r" id="flowNav" style="display:none">
+      <button class="nb" onclick="copyMermaid()">&#128203; Copy Mermaid</button>
+      <button class="nb" onclick="downloadFlowSVG()">&#11015; SVG</button>
+      <button class="nb" onclick="reload()">&#8635; New</button>
+    </div>
+  </div>
+
+  <div class="main-tabs">
+    <div class="mtab on" id="tabFlow" onclick="switchTab('flow')">&#9670; Flow<span class="badge" id="flowBadge">0</span></div>
+    <div class="mtab" id="tabScreens" onclick="switchTab('screens')">&#128203; Screens<span class="badge" id="screenBadge">0</span></div>
+  </div>
+
+  <!-- FLOW VIEW -->
+  <div class="flow-view on" id="flowView">
+    <div class="flow-toolbar">
+      <div class="fv-toggle">
+        <button class="fv-btn on" id="fvISA" onclick="setFlowView('isa88')">&#9670; ISA-88</button>
+        <button class="fv-btn" id="fvPhase" onclick="setFlowView('phase')">&#9776; Phase</button>
+      </div>
+      <span class="flow-stats" id="flowStats"></span>
+      <span class="flow-hint" id="flowHint"></span>
+    </div>
+    <div id="mermaidWrap"><div id="mermaidTarget"><div style="color:#8b8fa8;padding:40px;text-align:center">No Flow sheet found in workbook</div></div></div>
+  </div>
+
+  <!-- SCREEN VIEW -->
+  <div class="screen-view" id="screenView">
+    <div class="ts" id="tss"></div>
+    <div class="ly"><div class="pn" id="pan"></div><div class="ssd" id="sid"></div></div>
+  </div>
+</div>
+
+<div class="too" id="too"></div>
+<div class="ov" id="ov" onclick="if(event.target===this)cov()"><div id="oc"></div></div>
+<div class="ov" id="ol" onclick="if(event.target===this)cov()"><div id="olc" class="lm"></div></div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:false,securityLevel:'loose',theme:'dark',themeVariables:{primaryColor:'#6c8aff',primaryTextColor:'#fff',primaryBorderColor:'#4b5079',lineColor:'#4b5079',secondaryColor:'#a78bfa',tertiaryColor:'#242836',background:'#0f1117',mainBkg:'#242836',nodeBorder:'#4b5079',clusterBkg:'rgba(108,138,255,0.06)',clusterBorder:'rgba(108,138,255,0.15)',titleColor:'#8b8fa8',edgeLabelBackground:'#1a1d27',fontSize:'13px'},flowchart:{htmlLabels:true,curve:'basis',padding:15,nodeSpacing:40,rankSpacing:60,useMaxWidth:false}});
+
+// Global callback for Mermaid click events
+window.jumpToScreen=function(nodeId){
+  if(IX[nodeId]!==undefined){switchTab('screens');sGo(IX[nodeId])}
+  else{toast('No wireframe for '+nodeId)}
+};
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let CFG={},S=[],IX={},cur=0,H=[];
+let flowSteps=[],flowEdges=[],flowCode='',hasFlow=false,hasScreens=false;
+let flowViewMode='isa88';  // 'isa88' or 'phase'
+const TM={
+  'Manual Instruction':{prompt:'Prompt message',sub:'WI_COMMON_MSG:1',color:'yellow'},
+  'Scan / Parameter Entry':{prompt:'Display Single Manual Instruction Text.',sub:'DISPLAY_INSTRUCTION_TEXT:4',color:'teal'},
+  'Auto System Step':{prompt:'Prompt message',sub:'WI_COMMON_MSG:1',color:'yellow',auto:1},
+  'Error Screen':{prompt:'Display instruction and enter selection',sub:'ENTER_SELECTION_1:1',color:'teal',err:1},
+  'Dropdown Select':{prompt:'Display Single Manual Instruction Text.',sub:'DISPLAY_INSTRUCTION_TEXT_DROPDOWN:1',color:'yellow'},
+  'End Screen':{prompt:'Prompt message',sub:'WI_COMMON_MSG:1',color:'gray',end:1},
+};
+const TC={START:'#34d399',END:'#34d399',ACTION:'#6c8aff',DECISION:'#fbbf24',PARALLEL_SPLIT:'#a78bfa',PARALLEL_JOIN:'#a78bfa',LOOP_RETURN:'#f59e0b',TRANSITION:'#fb923c',SUBPROCESS:'#4ade80',SIGNATURE:'#38bdf8'};
+
+// ════════════════════════════════════════════
+//  FILE HANDLING
+// ════════════════════════════════════════════
+const dz=document.getElementById('dz');
+['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('ov')}));
+['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('ov')}));
+dz.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length)handleFile(ev.dataTransfer.files[0])});
+window.handleFile=function(f){if(!f)return;document.getElementById('de').textContent='';const r=new FileReader();r.onload=function(e){try{const wb=XLSX.read(e.target.result,{type:'array'});parseAll(wb);startApp()}catch(err){document.getElementById('de').textContent='Error: '+err.message;console.error(err)}};r.readAsArrayBuffer(f)};
+
+function parseAll(wb){
+  // Config: Row1=Title, Row2=ObjName, Row3=ObjDesc, Row4=Version, Row6=OrderInfo header, Row7-10=order fields
+  if(wb.Sheets['Config']){
+    const cfg=XLSX.utils.sheet_to_json(wb.Sheets['Config'],{header:1});
+    CFG={title:cv(cfg,0,1)||'',objName:cv(cfg,1,1)||'',objDesc:cv(cfg,2,1)||'',version:cv(cfg,3,1)||'',orderInfo:{}};
+    for(let r=6;r<=9;r++){const k=cv(cfg,r,0),v=cv(cfg,r,1);if(k)CFG.orderInfo[k]=v||''}
+  } else CFG={title:'',objName:'',objDesc:'',version:'',orderInfo:{}};
+
+  hasFlow=false;hasScreens=false;
+
+  // ── Recipe sheet (16-col: A-I flow+ISA88+link, J-P screen) ──
+  if(wb.Sheets['Recipe']){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets['Recipe'],{defval:''});
+    if(rows.length&&rows[0].Step_ID!==undefined){parseRecipe16(rows);return}
+  }
+
+  // ── Flow + Screens (two-sheet) ──
+  if(wb.Sheets['Flow']){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets['Flow'],{defval:''});
+    if(rows.length&&rows[0].Step_ID!==undefined){hasFlow=true;parseFlow(rows)}
+  }
+  if(wb.Sheets['Screens']){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets['Screens'],{defval:''});
+    if(rows.length&&rows[0].Screen_ID!==undefined){hasScreens=true;parseScreens12(rows)}
+  }
+
+  if(!hasFlow&&!hasScreens)throw new Error('No Recipe, Flow, or Screens sheet found');
+}
+
+// ════════════════════════════════════════════
+//  RECIPE PARSER (17-col single sheet)
+//  A-E: Step_ID, Step_Description, Step_Type, Next, Phase
+//  F-H: UP, OP, EWI (ISA-88)
+//  I-N: Screen_Type, Instructions, Parameters, Signatures, Actions, Notes
+//  O-Q: BoS, Hazard, SOP (indicator badges)
+// ════════════════════════════════════════════
+let flowScreenMap={};
+
+function parseRecipe16(rows){
+  flowSteps=[];flowEdges=[];flowScreenMap={};S=[];
+  const ids=new Set();
+
+  // Pass 1: flow nodes
+  for(const r of rows){
+    const id=String(r.Step_ID||'').trim();if(!id)continue;
+    let name=String(r.Step_Description||'').trim(),color='';
+    const cm=name.match(/^\[#([0-9a-fA-F]{6})]\s*/);
+    if(cm){color='#'+cm[1];name=name.slice(cm[0].length)}
+    flowSteps.push({id,name,type:String(r.Step_Type||'ACTION').trim().toUpperCase(),next:String(r.Next||'').trim(),mcf:'',phase:String(r.Phase||'').trim(),color,up:String(r.UP||'').trim(),op:String(r.OP||'').trim(),ewi:String(r.EWI||'').trim()});
+    ids.add(id);
+    // Screen link: derived from Step_ID when Screen_Type is populated
+    const scrType=String(r.Screen_Type||'').trim();
+    if(scrType)flowScreenMap[id]=id;
+  }
+
+  // Parse edges
+  for(const s of flowSteps){
+    const nxt=s.next;if(!nxt)continue;
+    if(s.type==='SELECT'){nxt.split('|').map(x=>x.trim()).filter(Boolean).forEach(b=>{const m=b.match(/^(.+):\s*(>>)?\s*(\S+)$/);if(m){const lbl=m[1].trim().replace(/"/g,"'").replace(/[<>]/g,''),tgt=m[3];if(ids.has(tgt))flowEdges.push({from:s.id,to:tgt,label:lbl,type:m[2]?'loop':'select'})}});continue}
+    if(nxt.indexOf('||')===0){nxt.substring(2).split(',').map(x=>x.trim()).filter(Boolean).forEach(p=>{if(ids.has(p))flowEdges.push({from:s.id,to:p,label:'\u2225',type:'parallel'})});continue}
+    if(nxt.indexOf('Y:')!==-1||nxt.indexOf('N:')!==-1){nxt.split('|').map(x=>x.trim()).forEach(b=>{const ym=b.match(/^Y:\s*(>>)?\s*(\S+)/),nm=b.match(/^N:\s*(>>)?\s*(\S+)/);if(ym&&ids.has(ym[2]))flowEdges.push({from:s.id,to:ym[2],label:'Yes',type:ym[1]?'loop':'yes'});if(nm&&ids.has(nm[2]))flowEdges.push({from:s.id,to:nm[2],label:'No',type:nm[1]?'loop':'no'})});continue}
+    if(nxt.indexOf('>>')===0){const tgt=nxt.substring(2).trim();if(ids.has(tgt))flowEdges.push({from:s.id,to:tgt,label:'\u21BA Loop',type:'loop'});continue}
+    nxt.split(',').map(x=>x.trim()).filter(Boolean).forEach(t=>{if(ids.has(t))flowEdges.push({from:s.id,to:t,label:'',type:'seq'})});
+  }
+  hasFlow=true;
+
+  // Pass 2: screens from rows with Screen_Type populated (Screen_Type replaces old Screen column as trigger)
+  const screenRows={};
+  for(const r of rows){
+    const scrType=String(r.Screen_Type||'').trim();if(!scrType)continue;
+    const id=String(r.Step_ID||'').trim();if(!id)continue;
+    screenRows[id]=r;
+  }
+
+  // Build screens in flow order (using flowScreenMap)
+  const addedScreens=new Set();
+  for(const fs of flowSteps){
+    const scrId=flowScreenMap[fs.id];
+    if(!scrId||addedScreens.has(scrId))continue;
+    addedScreens.add(scrId);
+    const r=screenRows[scrId];if(!r)continue;
+
+    const type=String(r.Screen_Type||'Manual Instruction').trim();
+    const tm=TM[type]||TM['Manual Instruction'];
+    const s={id:scrId,prompt:{title:tm.prompt,sub:tm.sub},colorBar:tm.color};
+    s.procedureName=fs.phase;s.phaseId=scrId;
+
+    const instr=String(r.Instructions||'').trim();
+    if(instr&&!tm.auto&&!tm.end){
+      // Parse instructions with [TABLE] support
+      const lines=instr.split('\n').filter(Boolean);
+      const instArr=[];
+      let tbl=null;
+      for(let li=0;li<lines.length;li++){
+        const ln=lines[li].trim();
+        if(ln.startsWith('[TABLE]')){
+          tbl={title:ln.slice(7).trim()||'',headers:[],rows:[]};
+          continue;
+        }
+        if(tbl){
+          if(ln.indexOf('|')!==-1){
+            const cells=ln.split('|').map(c=>c.trim());
+            if(!tbl.headers.length){tbl.headers=cells}
+            else{tbl.rows.push(cells.map(c=>{const cm=c.match(/^\{(\w+)\}(.*)$/);return cm?{cls:cm[1],text:cm[2]}:c}))}
+          } else {
+            s.table=tbl;tbl=null;
+            if(ln.startsWith('**'))instArr.push({text:ln.slice(2).trim(),bold:true});
+            else instArr.push(ln);
+          }
+          continue;
+        }
+        if(ln.startsWith('**'))instArr.push({text:ln.slice(2).trim(),bold:true});
+        else instArr.push(ln);
+      }
+      if(tbl)s.table=tbl;
+      if(instArr.length)s.instructions=instArr;
+    }
+    if(tm.auto&&instr)s.autoInstruction=instr;
+    if(tm.end)s.isEnd=true;
+
+    const notes=String(r.Notes||'').trim();
+    if(tm.err){s.errorBanner=true;const el=notes.split('\n').filter(l=>l.startsWith('Error:'));if(el.length)s.errorPopup={message:'LLY_Data_Resolve_XPath_wEvaluate: Popup message\n'+el.map(l=>l.slice(6).trim()).join('\n')}}
+
+    // Parameters: "*Label" = input, "*Label|Opt1,Opt2" = select, one per line for multiple
+    const param=String(r.Parameters||'').trim();
+    if(param){
+      const paramLines=param.split('\n').filter(Boolean);
+      s.parameters=paramLines.map(pl=>{
+        const parts=pl.trim().split('|');
+        const p={label:parts[0].trim(),type:'input'};
+        if(parts.length>1){p.type='select';p.options=parts[1].split(',').map(x=>x.trim())}
+        return p;
+      });
+    }
+
+    // Signatures: "Operator [Op]" or "Op + Verifier [Ver]"
+    const sigs=String(r.Signatures||'').trim();
+    if(sigs){
+      const sm={'Operator':['Operator'],'Op + Verifier':['Operator','Verifier'],'Op + Supervisor':['Operator','Supervisor']};
+      const sigBase=sigs.replace(/\s*\[.*?\]\s*/,'').trim();
+      if(sm[sigBase])s.signatures=sm[sigBase];
+      const pm={'Op':{type:'security',role:'OPERATOR/USE'},'Ver':{type:'security',role:'VERIFIER/USE',comments:true},'Sup':{type:'security',role:'SUPERVISOR/USE',comments:true}};
+      const popMatch=sigs.match(/\[(\w+)\]/);
+      if(popMatch&&pm[popMatch[1]])s.popup=pm[popMatch[1]];
+    }
+
+    const act=String(r.Actions||'').trim();
+    if(act){const aa=[];act.split('\n').filter(Boolean).forEach(l=>{const lt=l.trim();if(lt.startsWith('[RETURN]')){s.returnTarget=lt.slice(8).trim()}else if(lt.startsWith('[S]'))aa.push({section:lt.slice(3).trim()});else{let m=l.split('\u2192');if(m.length<2)m=l.split('->');if(m.length>=2)aa.push({label:m[0].trim(),target:m[1].trim()})}});if(aa.length)s.actions=aa}
+
+    if(notes){let n=notes;if(tm.err)n=n.split('\n').filter(l=>!l.startsWith('Error:')).join('\n');s.notes=n}
+
+    // BoS / Hazard / SOP — indicator badges for top-right corner
+    const bosVal=String(r.BoS||'').trim().toUpperCase();
+    const hazVal=String(r.Hazard||'').trim().toUpperCase();
+    const sopVal=String(r.SOP||'').trim();
+    if(bosVal==='Y'||bosVal==='YES')s.bos=true;
+    if(hazVal==='Y'||hazVal==='YES')s.hazard=true;
+    if(sopVal)s.sop=sopVal;
+
+    S.push(s);
+  }
+  IX={};S.forEach((s,i)=>{IX[s.id]=i});
+  hasScreens=S.length>0;
+}
+
+function toMermaid(){
+  let code='flowchart TD\n\n';
+
+  function nd(s){
+    // Sanitise label: fallback to ID if empty, escape quotes and special chars
+    const raw=s.name||s.id;
+    const lb=raw.replace(/"/g,"'").replace(/`/g,"'").replace(/[<>]/g,'');
+    switch(s.type){
+      case 'START':return `${s.id}(["${lb}"])`;
+      case 'END':return `${s.id}(["${lb}"])`;
+      case 'DECISION':return `${s.id}{"${lb}"}`;
+      case 'PARALLEL_SPLIT':case 'PARALLEL_JOIN':return `${s.id}[["${lb}"]]`;
+      case 'LOOP_RETURN':return `${s.id}>"${lb}"]`;
+      case 'SIGNATURE':return `${s.id}[/"${lb}"\\]`;
+      default:return `${s.id}["${lb}"]`;
+    }
+  }
+
+  // Check if ISA-88 data exists
+  const hasISA88=flowSteps.some(s=>s.up);
+  const useISA88=(flowViewMode==='isa88'&&hasISA88);
+
+  if(useISA88){
+    // Build nested hierarchy: UP → OP → steps
+    // Structure: { UP_name: { _direct: [steps], OP_name: [steps] } }
+    const hier={};
+    const ungrouped=[];
+    for(const s of flowSteps){
+      if(!s.up){ungrouped.push(s);continue}
+      if(!hier[s.up])hier[s.up]={_direct:[]};
+      if(s.op){
+        if(!hier[s.up][s.op])hier[s.up][s.op]=[];
+        hier[s.up][s.op].push(s);
+      }else{
+        hier[s.up]._direct.push(s);
+      }
+    }
+    // Emit ungrouped nodes first
+    for(const s of ungrouped) code+=`    ${nd(s)}\n`;
+    // Emit nested subgraphs
+    for(const[upName,ops]of Object.entries(hier)){
+      const upId='up_'+upName.replace(/[^a-zA-Z0-9]/g,'_');
+      code+=`    subgraph ${upId}["${upName}"]\n`;
+      code+=`        direction TB\n`;
+      // Direct children (UP but no OP)
+      for(const s of ops._direct) code+=`        ${nd(s)}\n`;
+      // OP subgraphs
+      for(const[opName,steps]of Object.entries(ops)){
+        if(opName==='_direct')continue;
+        const opId=upId+'_op_'+opName.replace(/[^a-zA-Z0-9]/g,'_');
+        code+=`        subgraph ${opId}["${opName}"]\n`;
+        code+=`            direction TB\n`;
+        for(const s of steps) code+=`            ${nd(s)}\n`;
+        code+=`        end\n`;
+      }
+      code+=`    end\n\n`;
+    }
+  } else {
+    // Fallback to Phase grouping
+    const phases={};for(const s of flowSteps){const ph=s.phase||'_';if(!phases[ph])phases[ph]=[];phases[ph].push(s)}
+    const hasP=Object.keys(phases).length>1||!phases['_'];
+    if(hasP){for(const[ph,nodes]of Object.entries(phases)){if(ph==='_'){for(const s of nodes)code+=`    ${nd(s)}\n`}else{code+=`    subgraph sg_${ph.replace(/[^a-zA-Z0-9]/g,'_')}["${ph}"]\n        direction TB\n`;for(const s of nodes)code+=`        ${nd(s)}\n`;code+=`    end\n\n`}}}
+    else{for(const s of flowSteps)code+=`    ${nd(s)}\n`}
+  }
+
+  code+='\n';
+  // Edges
+  for(const e of flowEdges){
+    if(e.type==='loop'){code+=e.label&&e.label!=='Loop'&&e.label!=='\u21BA Loop'?`    ${e.from} -. "${e.label}" .-> ${e.to}\n`:`    ${e.from} -.-> ${e.to}\n`}
+    else if(e.label){code+=`    ${e.from} -->|"${e.label}"| ${e.to}\n`}
+    else{code+=`    ${e.from} --> ${e.to}\n`}
+  }
+  code+='\n';
+  // Node styles by type
+  const byType={};for(const s of flowSteps){if(!byType[s.type])byType[s.type]=[];byType[s.type].push(s)}
+  const typeCol={START:'#34d399',END:'#f87171',ACTION:'#6c8aff',SELECT:'#6c8aff',DECISION:'#fbbf24',PARALLEL_SPLIT:'#a78bfa',PARALLEL_JOIN:'#a78bfa',LOOP_RETURN:'#f59e0b',TRANSITION:'#fb923c',SUBPROCESS:'#4ade80',SIGNATURE:'#38bdf8'};
+  for(const[typ,nodes]of Object.entries(byType)){const c=typeCol[typ]||'#6c8aff';code+=`    classDef cls${typ} fill:${c},stroke:${c},color:#fff,stroke-width:1.5px\n    class ${nodes.map(n=>n.id).join(',')} cls${typ}\n`}
+  for(const s of flowSteps){if(s.color)code+=`    style ${s.id} fill:${s.color},stroke:${s.color},color:#fff\n`}
+  // Click callbacks for screen links
+  if(hasScreens){
+    code+=`\n`;
+    for(const s of flowSteps){
+      const scrId=flowScreenMap[s.id];
+      if(scrId&&IX[scrId]!==undefined){
+        code+=`    click ${s.id} call jumpToScreen("${scrId}")\n`;
+      }
+    }
+  }
+  return code;
+}
+
+function cv(a,r,c){return a[r]?a[r][c]:undefined}
+function st(v){return v==null?'':String(v).trim()}
+
+// ════════════════════════════════════════════
+//  APP START
+// ════════════════════════════════════════════
+function startApp(){
+  document.getElementById('dp').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('nt').textContent=(CFG.title||'DBR Recipe')+(CFG.version?' — v'+CFG.version:'');
+  document.getElementById('flowBadge').textContent=flowSteps.length;
+  document.getElementById('screenBadge').textContent=S.length;
+
+  // Show/hide tabs based on available data
+  document.getElementById('tabFlow').style.display=hasFlow?'':'none';
+  document.getElementById('tabScreens').style.display=hasScreens?'':'none';
+
+  if(hasFlow){renderFlow();switchTab('flow')}
+  else if(hasScreens){switchTab('screens')}
+
+  if(hasScreens){cur=0;H=[];renderScreen(0)}
+  toast(`Loaded: ${hasFlow?flowSteps.length+' flow nodes':''}${hasFlow&&hasScreens?' + ':''}${hasScreens?S.length+' screens':''}`);
+}
+
+// ════════════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════════════
+window.switchTab=function(tab){
+  document.getElementById('tabFlow').classList.toggle('on',tab==='flow');
+  document.getElementById('tabScreens').classList.toggle('on',tab==='screens');
+  document.getElementById('flowView').classList.toggle('on',tab==='flow');
+  document.getElementById('screenView').classList.toggle('on',tab==='screens');
+  document.getElementById('flowNav').style.display=tab==='flow'?'flex':'none';
+  document.getElementById('screenNav').style.display=tab==='screens'?'flex':'none';
+};
+
+window.setFlowView=function(mode){
+  flowViewMode=mode;
+  document.getElementById('fvISA').classList.toggle('on',mode==='isa88');
+  document.getElementById('fvPhase').classList.toggle('on',mode==='phase');
+  renderFlow();
+};
+
+// ════════════════════════════════════════════
+//  FLOW RENDER
+// ════════════════════════════════════════════
+async function renderFlow(){
+  // Auto-detect ISA-88 data availability
+  const hasISA88=flowSteps.some(s=>s.up);
+  const isaBtn=document.getElementById('fvISA');
+  if(isaBtn){isaBtn.style.opacity=hasISA88?'1':'0.4';isaBtn.title=hasISA88?'Group by UP → OP':'No ISA-88 data in workbook'}
+
+  flowCode=toMermaid();
+  const target=document.getElementById('mermaidTarget');
+  target.innerHTML='';
+  try{
+    const{svg,bindFunctions}=await mermaid.render('mDiag',flowCode);
+    target.innerHTML=svg;
+    if(bindFunctions)bindFunctions(target);
+    if(hasScreens){
+      const linked=flowSteps.filter(s=>{const sid=flowScreenMap[s.id];return sid&&IX[sid]!==undefined}).length;
+      document.getElementById('flowHint').textContent=`\u2139 ${linked} nodes linked to wireframes — click to view`;
+    }
+  }catch(err){target.innerHTML='<pre style="color:#f87171;padding:20px">'+err.message+'</pre>'}
+  const viewLabel=(flowViewMode==='isa88'&&hasISA88)?'ISA-88 (UP \u2192 OP)':'Phase';
+  document.getElementById('flowStats').textContent=`${flowSteps.length} nodes \u00B7 ${flowEdges.length} edges \u00B7 ${viewLabel}`;
+}
+
+// ════════════════════════════════════════════
+//  SCREEN RENDER (from wireframe v5)
+// ════════════════════════════════════════════
+function renderScreen(i){
+  cur=i;const s=S[i];
+  document.getElementById('pll').textContent=`${i+1} / ${S.length}`;
+  document.getElementById('bP').disabled=i===0;document.getElementById('bN').disabled=i===S.length-1;
+  document.getElementById('bBk').style.opacity=H.length>0?'1':'0.5';
+  document.getElementById('tss').innerHTML=S.map((_,j)=>`<div class="tm${j===i?' on':''}" onclick="sGo(${j})">${j+1}</div>`).join('');
+  rP(s);rS(s);
+}
+
+function rP(s){
+  const hasPopup=s.popup||s.errorPopup;
+  let h=`<div class="ppb"><div class="pn-n">1</div><div class="pn-i"><div class="t">${s.prompt?.title||'Prompt message'}</div><div class="s">${s.prompt?.sub||''}</div></div><span style="font-size:14px;color:#ccc">\u2606</span><span style="font-size:12px;color:#666">\u2297</span></div>`;
+  h+=`<div class="ttb"><div class="ti">\u24D8</div><div class="ti">\uD83D\uDD17</div><div class="ti">\uD83D\uDCAC</div><div class="ti">\uD83D\uDCCB</div><div class="ti">\u270F\uFE0F</div><div class="ttr"><button class="bc" style="font-size:16px">\u22EF</button>`;
+  if(hasPopup)h+=`<button class="bc" onclick="triggerPopup()" title="Show popup">\u25B6</button>`;else h+=`<button class="bc">\u25B6</button>`;
+  h+=`</div></div>`;
+  if(s.errorBanner){h+=`<div class="eb" onclick="triggerPopup()">There are error messages to view for this activity. Click here to see these messages`;if(s.returnTarget)h+=`<span class="eb-return" onclick="event.stopPropagation();sGoId('${s.returnTarget}')" title="Loop back to ${s.returnTarget}">\u21A9 ${s.returnTarget}</span>`;h+=`</div>`}
+  h+=`<div class="ct"><div class="cb ${s.colorBar||'yellow'}"></div>`;
+  if(s.isEnd){h+=`<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column"><div class="ebox"><div class="et">END OF Procedure</div><div class="es">CLICK HOME TO RESTART</div></div><button class="hb" onclick="sGo(0)">\uD83C\uDFE0</button></div></div>`;document.getElementById('pan').innerHTML=h;return}
+  const oi=CFG.orderInfo;if(oi&&!s.autoInstruction&&Object.keys(oi).length){const ks=Object.keys(oi);h+=`<table class="oi">`;for(let i=0;i<ks.length;i+=2){h+=`<tr><td class="lb">${ks[i]}</td><td>${oi[ks[i]]}</td>`;if(ks[i+1])h+=`<td class="lb">${ks[i+1]}</td><td>${oi[ks[i+1]]}</td>`;h+=`</tr>`}h+=`</table>`}
+  if(s.procedureName)h+=`<div class="hr"><div class="prn">${s.procedureName}</div><div class="phb">${s.bos?'<span class="bos">Basis of Safety</span>':''}${s.hazard?'<span class="haz-badge">Hazard Statement</span>':''}${s.sop?'<span class="sop-badge">'+s.sop+'</span>':''}</div></div>`;
+  if(s.autoInstruction)h+=`<div class="aii"><div class="al">AUTO_INSTRUCTION_TEXT</div><div class="at">${s.autoInstruction.replace(/\n/g,'<br>')}</div></div>`;
+  if(s.instructions)s.instructions.forEach(ii=>{if(typeof ii==='string'){if(ii)h+=`<div class="ins">${ii}</div>`}else if(ii.text)h+=`<div class="ins${ii.bold?' b':''}">${ii.text}</div>`});
+  if(s.table){if(s.table.title)h+=`<div class="ins b" style="margin-top:10px">${s.table.title}</div>`;h+=`<table class="dt"><tr>${s.table.headers.map(t=>`<th>${t}</th>`).join('')}</tr>`;s.table.rows.forEach(row=>{h+=`<tr>${row.map(td=>typeof td==='object'?`<td class="${td.cls||''}">${td.text}</td>`:`<td>${td}</td>`).join('')}</tr>`});h+=`</table>`}
+  if(s.parameters?.length){h+=`<div class="pps"><div class="ppsl"><span class="pi">!</span> PARAMETERS</div>`;s.parameters.forEach(p=>{const lb=p.label.startsWith('*')?`<span class="rq">*</span>${p.label.slice(1)}`:p.label;h+=`<div class="ppr"><span class="ppl">${lb}</span>${p.type==='select'?`<select class="ppsel">${(p.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`:`<input class="ppi" type="text">`}</div>`});h+=`</div>`}
+  if(s.signatures?.length){const ck=s.popup?' onclick="triggerPopup()" title="Click to sign"':'';h+=`<div class="sgs"><div class="sgsl"${ck}><span class="si">\u270F</span> SIGNATURES ${s.popup?'<span style="font-size:9px;color:#999;margin-left:6px">(click to sign)</span>':''}</div>`;s.signatures.forEach(r=>h+=`<div class="sgr"${ck}><span class="rl">${r}</span><span class="sgg">\u2550</span></div>`);h+=`</div>`}
+  h+=`</div>`;document.getElementById('pan').innerHTML=h;
+}
+
+function rS(s){
+  let h=`<div class="sx"><span class="sl">Screen ID:</span> <span class="sv">${s.id}</span>`;
+  if(hasFlow){h+=` <span class="flow-link" onclick="switchTab('flow')" title="View in Flow">\u25C6 Flow</span>`}
+  h+=`</div>`;
+  h+=`<div class="sx"><div class="sl">Notes:</div><div class="stt">${s.notes||''}</div></div>`;
+  h+=`<div class="ax"><div class="axh"><span class="sl">Actions:</span><button class="hn" onclick="sGo(0)">\uD83C\uDFE0</button></div>`;
+  if(s.returnTarget)h+=`<div class="ari" onclick="sGoId('${s.returnTarget}')" title="On error dismiss, loop back to ${s.returnTarget}"><div class="ar-icon">\u21A9</div><span class="ar-label">Return To:</span><span class="ar-target">${s.returnTarget}</span></div>`;
+  if(s.actions?.length)s.actions.forEach(a=>{if(a.section)h+=`<div class="aas">${a.section}</div>`;else h+=`<div class="aai" onclick="sGoId('${a.target}')"><div class="al" title="${a.label}">${a.label}</div><div class="ad">\u25BC</div><span class="ap">+</span><div class="aw"></div></div>`});
+  h+=`</div>`;document.getElementById('sid').innerHTML=h;
+}
+
+// ════════════════════════════════════════════
+//  POPUPS
+// ════════════════════════════════════════════
+window.triggerPopup=function(){const s=S[cur];if(s.errorPopup)showErr(s.errorPopup,s.returnTarget);else if(s.popup)showSec(s.popup)};
+function showSec(c){const rn=(c.role||'OPERATOR/USE').split('/')[0];let h=`<div class="pop-s"><div class="sh"><div class="ic">\uD83D\uDEE1</div><div class="ttt">Security Check</div><div class="ro">${c.role}</div><hr></div><div class="sdd">You must sign the ${rn} signature for the activity.</div><div class="sff"><div class="fl">USER NAME</div><input class="fi" type="text"><input class="fi" type="password">`;if(c.comments)h+=`<div class="fl">COMMENTS</div><textarea class="ft"></textarea>`;h+=`</div><div class="sbb"><button onclick="cov()">CANCEL</button><button class="ok" onclick="cov()">OK</button></div></div>`;document.getElementById('oc').innerHTML=h;document.getElementById('ov').classList.add('on')}
+function showErr(c,rt){if(!c)return;const cf=rt?`cov();sGoId('${rt}')`:'cov()';let h=`<div class="pop-e"><div class="eb2">Error messages for this activity</div><div class="eeh"><div class="et2">Error Messages</div></div><button class="ex" onclick="${cf}">\u2715</button><div class="ebd">${(c.message||'').replace(/\n/g,'<br>')}</div>`;if(rt)h+=`<div style="padding:4px 12px 0;font-size:9px;color:#888">On close: return to <strong style="color:var(--blue)">${rt}</strong></div>`;h+=`<div class="ef"><button onclick="${cf}">${rt?'CLOSE & RETURN':'CLOSE'}</button></div></div>`;document.getElementById('oc').innerHTML=h;document.getElementById('ov').classList.add('on')}
+window.cov=function(){document.getElementById('ov').classList.remove('on');document.getElementById('ol').classList.remove('on')};
+
+// ════════════════════════════════════════════
+//  SCREEN NAVIGATION
+// ════════════════════════════════════════════
+window.sNav=function(d){const n=cur+d;if(n>=0&&n<S.length){cov();H.push(cur);renderScreen(n)}};
+window.sGo=function(i){if(i>=0&&i<S.length){cov();H.push(cur);renderScreen(i)}};
+window.sGoId=function(id){const i=IX[id];if(i!==undefined)sGo(i);else toast(`"${id}" not found`)};
+window.sGoBack=function(){if(H.length>0){cov();const prev=H.pop();renderScreen(prev)}};
+window.sDoJump=function(){const val=document.getElementById('jti').value.trim();if(!val)return;const num=parseInt(val);if(!isNaN(num)&&num>0&&num<=S.length){sGo(num-1);document.getElementById('jti').value=''}else{const idx=IX[val];if(idx!==undefined){sGo(idx);document.getElementById('jti').value=''}else toast(`"${val}" not found`)}};
+
+window.openList=function(){
+  let h=`<input type="text" class="lm-search" placeholder="Search screens..." id="lms" onkeyup="filterList()">`;
+  const grouped={};S.forEach((s,i)=>{const proc=s.procedureName||'[No Procedure]';if(!grouped[proc])grouped[proc]=[];grouped[proc].push({s,i})});
+  Object.keys(grouped).sort().forEach(proc=>{h+=`<div class="lg"><div class="lg-title">${proc}</div>`;grouped[proc].forEach(({s,i})=>{h+=`<div class="lr${i===cur?' cur':''}" onclick="cov();sGo(${i})"><span class="ln">${i+1}.</span> ${s.id}<span class="lt">${s.phaseId||''}</span></div>`});h+=`</div>`});
+  document.getElementById('olc').innerHTML=h;setTimeout(()=>document.getElementById('lms')?.focus(),100);document.getElementById('ol').classList.add('on');
+};
+window.filterList=function(){const q=document.getElementById('lms').value.toLowerCase();document.querySelectorAll('.lr').forEach(item=>{item.style.display=item.textContent.toLowerCase().includes(q)?'':'none'})};
+
+// ════════════════════════════════════════════
+//  FLOW EXPORTS
+// ════════════════════════════════════════════
+window.copyMermaid=function(){navigator.clipboard.writeText(flowCode).then(()=>toast('Mermaid code copied'))};
+window.downloadFlowSVG=function(){const el=document.querySelector('#mermaidTarget svg');if(!el)return;const cl=el.cloneNode(true);cl.setAttribute('xmlns','http://www.w3.org/2000/svg');const blob=new Blob([new XMLSerializer().serializeToString(cl)],{type:'image/svg+xml'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MCF_Flow.svg';a.click()};
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function toast(m){const t=document.getElementById('too');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1200)}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+window.reload=function(){document.getElementById('app').style.display='none';document.getElementById('dp').style.display='flex';S=[];CFG={};IX={};flowSteps=[];flowEdges=[];hasFlow=hasScreens=false};
+
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('screenView').classList.contains('on')){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown')sNav(1);
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp')sNav(-1);
+  }
+  if(e.key==='Escape')cov();
+  if(e.key==='/'){const j=document.getElementById('jti');if(j){j.focus();e.preventDefault()}}
+});
+
+// ════════════════════════════════════════════
+//  STORYBOARD EXPORT (HTML / PDF)
+// ════════════════════════════════════════════
+window.exportStoryboard=function(mode){
+  if(!S.length){toast('No screens to export');return}
+  toast(mode==='pdf'?'Generating PDF...':'Generating HTML...');
+  const savedCur=cur;
+
+  // ── Render each screen and capture ──
+  const pages=[];
+  for(let i=0;i<S.length;i++){
+    renderScreen(i);
+    pages.push({
+      idx:i, id:S[i].id, phase:S[i].phaseId||S[i].procedureName||'',
+      proc:S[i].procedureName||'', type:S[i].colorBar||'yellow',
+      panel:document.getElementById('pan').innerHTML,
+      sidebar:document.getElementById('sid').innerHTML
+    });
+  }
+  renderScreen(savedCur);
+
+  const title=CFG.title||'DBR Recipe Storyboard';
+  const oi=CFG.orderInfo||{};
+  const now=new Date().toLocaleDateString('en-IE',{day:'2-digit',month:'short',year:'numeric'});
+
+  // ── Build HTML ──
+  let html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>${esc(title)}</title>
+<style>
+@page{size:A4 landscape;margin:12mm 10mm 14mm 10mm}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:11px;color:#1a1a1a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* COVER */
+.cover{page-break-after:always;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:95vh;text-align:center}
+.cover .logo{font-size:13px;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:40px}
+.cover h1{font-size:28px;font-weight:700;color:#2860c0;margin-bottom:8px}
+.cover .sub{font-size:16px;color:#555;margin-bottom:30px}
+.cover .meta{font-size:12px;color:#666;line-height:1.8}
+.cover .meta strong{color:#333}
+.cover .date{margin-top:30px;font-size:11px;color:#999}
+.cover .count{margin-top:8px;font-size:12px;color:#2860c0;font-weight:600}
+
+/* TOC */
+.toc{page-break-after:always;padding:20px 40px}
+.toc h2{font-size:18px;color:#2860c0;margin-bottom:16px;border-bottom:2px solid #2860c0;padding-bottom:6px}
+.toc-group{margin-bottom:14px}
+.toc-group-title{font-size:12px;font-weight:700;color:#555;background:#f0f0f0;padding:4px 10px;margin-bottom:4px}
+.toc-item{display:flex;align-items:baseline;padding:3px 10px 3px 20px;font-size:11px;border-bottom:1px dotted #ddd}
+.toc-num{font-weight:700;color:#2860c0;min-width:30px}
+.toc-id{font-weight:600;min-width:180px}
+.toc-phase{color:#888;font-size:10px}
+
+/* PAGE */
+.page{page-break-after:always;page-break-inside:avoid;margin-bottom:0}
+.page:last-child{page-break-after:auto}
+.page-hdr{background:#2a2a2a;color:#fff;padding:6px 14px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
+.page-hdr .ph-left{font-weight:700}.page-hdr .ph-right{font-size:10px;opacity:.7}
+.page-hdr .ph-id{color:#5aacff;font-weight:700}
+.page-body{display:grid;grid-template-columns:1fr 280px;border:1px solid #ccc;border-top:none;min-height:460px}
+
+/* WIREFRAME PANEL — inherit from main styles */
+:root{--bg:#e2e2e2;--panel:#fff;--border:#000;--blue:#2860c0;--green:#1a8a1a;--red:#cc0000;--teal:#00a0a0;--ybar:#e0b020;--tbar:#00c0c0;--gbar:#b0b0b0;--text:#1a1a1a;--muted:#666;--popbg:#bcd4ee;--actbg:#b8d2f0;--actbd:#88a8d0}
+.pn{border:none;background:#fff;display:flex;flex-direction:column;min-height:460px}
+.ppb{display:flex;align-items:center;background:#f2f2f2;border-bottom:1px solid #ccc;padding:5px 10px;gap:10px;min-height:32px}
+.pn-n{width:22px;height:22px;border:1px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#333}
+.pn-i{flex:1}.pn-i .t{font-weight:600;font-size:11px;color:#222}.pn-i .s{font-size:9px;color:#888}
+.ttb{display:flex;align-items:center;padding:3px 10px;gap:8px;border-bottom:1px solid #eee;min-height:24px}
+.ti{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#555}
+.ttr{margin-left:auto;display:flex;gap:4px}
+.bc{width:28px;height:28px;border-radius:50%;background:#2860c0;color:#fff;border:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.eb{background:#fff;color:#cc0000;text-align:center;padding:4px 10px;font-size:10px;text-decoration:underline;border-bottom:1px solid #eee}
+.ct{flex:1;padding:10px 14px;display:flex;flex-direction:column;position:relative}
+.cb{position:absolute;left:0;top:0;bottom:0;width:5px}.cb.yellow{background:#e0b020}.cb.teal{background:#00c0c0}.cb.gray{background:#b0b0b0}
+.oi{border-collapse:collapse;margin-bottom:10px;font-size:10px}.oi td{border:1px solid #666;padding:2px 8px;background:#fff}.oi .lb{font-weight:600;min-width:100px;background:#f8f8f8}
+.hr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.prn{color:#2860c0;font-size:13px;font-weight:700}
+.phb{text-align:right}.phb .bos{color:#cc0000;font-weight:700;font-size:9px;text-decoration:underline;display:block}.phb .haz-badge{color:#b45309;font-weight:700;font-size:9px;text-decoration:underline;display:block}.phb .sop-badge{color:#2860c0;font-weight:700;font-size:9px;text-decoration:underline;display:block}.phb .pid{color:#2860c0;font-size:10px;font-weight:600}
+.ins{font-size:11px;line-height:1.5;margin-bottom:4px}.ins.b{font-weight:700}
+.sf{background:#ffff00;padding:3px 8px;font-weight:700;font-size:11px;margin-bottom:6px}
+.hzd{font-size:10px;margin-bottom:6px}.hzd .ht{font-weight:700}
+.aii{text-align:center;padding:20px 14px}.aii .al{color:#2860c0;text-decoration:underline;font-size:11px;margin-bottom:6px}.aii .at{font-size:11px}
+.dt{border-collapse:collapse;margin:6px 0;font-size:10px}.dt th{background:#333;color:#fff;padding:3px 8px;text-align:left;font-weight:600;border:1px solid #333}.dt td{padding:3px 8px;border:1px solid #888;background:#fff}.dt .restricted{color:#cc0000;font-weight:600}.dt .unrestricted{color:#1a8a1a;font-weight:600}
+.pps{margin-top:10px}.ppsl{color:#00a0a0;font-weight:700;font-size:11px;display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.ppsl .pi{width:16px;height:16px;border:2px solid #00a0a0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#00a0a0}
+.ppr{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px}.ppr .ppl{font-weight:600;min-width:180px;text-align:right}.ppr .ppl .rq{color:#cc0000}
+.ppi{border:1px solid #aaa;padding:3px 6px;min-width:240px;font-size:11px;background:#faf0f0}
+.ppsel{border:1px solid #aaa;padding:3px 6px;min-width:240px;font-size:11px;background:#fff}
+.sgs{margin-top:auto;padding-top:10px}.sgsl{color:#b8860b;font-weight:700;font-size:11px;display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.sgsl .si{width:16px;height:16px;background:#daa520;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px}
+.sgr{display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:2px}.sgr .rl{font-weight:700}
+.sgg{width:14px;height:14px;border-radius:3px;background:#2860c0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:7px}
+.ebox{border:2px solid #000;padding:20px 36px;text-align:center;margin:auto}.ebox .et{font-weight:700;font-size:13px}.ebox .es{font-size:11px;margin-top:4px}
+.hb{display:none}
+
+/* SIDEBAR */
+.ssd{display:flex;flex-direction:column;border-left:1px solid #ccc}
+.sx{background:#fff;padding:6px 8px;border-bottom:1px solid #ddd}
+.sx .sl{font-weight:700;font-size:10px}.sx .sv{color:#2860c0;font-weight:600;font-size:10px}.sx .stt{font-size:9px;line-height:1.3;margin-top:2px;white-space:pre-line}
+.ax{background:#fff;padding:6px 8px;flex:1}
+.axh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.axh .sl{font-weight:700;font-size:10px}
+.hn{display:none}
+.aai{display:flex;align-items:center;gap:3px;margin-bottom:4px}
+.aai .al{background:#e8eef8;border:1px solid #b0c0d8;padding:3px 6px;font-size:9px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aai .ad{background:#e8eef8;border:1px solid #b0c0d8;width:16px;height:22px;display:flex;align-items:center;justify-content:center;font-size:7px}
+.aai .ap{font-weight:700;color:#555;font-size:11px}.aai .aw{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid #2860c0}
+.aas{font-weight:700;font-size:9px;margin:4px 0 2px 0}
+.ari{display:flex;align-items:center;gap:5px;margin-bottom:6px;padding:4px 6px;background:#fff4e6;border:1px solid #e8a020;border-radius:3px;font-size:9px}
+.ari .ar-icon{width:18px;height:18px;background:#e8a020;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700}
+.ari .ar-label{font-weight:600;color:#8a6000}.ari .ar-target{color:#2860c0;font-weight:700;margin-left:auto}
+.eb-return{display:none}
+.flow-link{display:none}
+
+/* FOOTER */
+.page-ftr{background:#f5f5f5;border:1px solid #ccc;border-top:none;padding:3px 14px;display:flex;justify-content:space-between;font-size:9px;color:#888}
+</style></head><body>`;
+
+  // ── COVER PAGE ──
+  html+=`<div class="cover">
+    <div class="logo">Eli Lilly Kinsale — DBR Recipe Designer</div>
+    <h1>${esc(title)}</h1>
+    <div class="sub">${esc(CFG.objDesc||'Operator Screen Storyboard')}${CFG.version?' — Version '+esc(CFG.version):''}</div>
+    <div class="meta">
+    <strong>Object:</strong> ${esc(CFG.objName||'')}<br>`;
+  if(oi){for(const[k,v]of Object.entries(oi)){if(v)html+=`<strong>${esc(k)}:</strong> ${esc(v)}<br>`}}
+  html+=`</div><div class="count">${S.length} Screens</div>
+    <div class="date">Generated: ${now}</div>
+  </div>`;
+
+  // ── TABLE OF CONTENTS ──
+  html+=`<div class="toc"><h2>Table of Contents</h2>`;
+  const grouped={};
+  S.forEach((s,i)=>{const proc=s.procedureName||'[Ungrouped]';if(!grouped[proc])grouped[proc]=[];grouped[proc].push({s,i})});
+  for(const[proc,items]of Object.entries(grouped)){
+    html+=`<div class="toc-group"><div class="toc-group-title">${esc(proc)}</div>`;
+    for(const{s,i}of items){
+      html+=`<div class="toc-item"><span class="toc-num">${i+1}.</span><span class="toc-id">${esc(s.id)}</span><span class="toc-phase">${esc(s.phaseId||'')}</span></div>`;
+    }
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+
+  // ── SCREEN PAGES ──
+  for(const pg of pages){
+    html+=`<div class="page">
+      <div class="page-hdr">
+        <span class="ph-left">Screen ${pg.idx+1} of ${S.length} — <span class="ph-id">${esc(pg.id)}</span></span>
+        <span class="ph-right">${esc(title)}</span>
+      </div>
+      <div class="page-body">
+        <div class="pn">${pg.panel}</div>
+        <div class="ssd">${pg.sidebar}</div>
+      </div>
+      <div class="page-ftr">
+        <span>${esc(pg.proc)} ${pg.phase?'— '+esc(pg.phase):''}</span>
+        <span>Page ${pg.idx+3} of ${S.length+2}</span>
+      </div>
+    </div>`;
+  }
+
+  html+=`</body></html>`;
+
+  // ── OUTPUT ──
+  if(mode==='html'){
+    const blob=new Blob([html],{type:'text/html'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(title).replace(/[^a-zA-Z0-9_-]/g,'_')+'_Storyboard.html';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    toast('HTML storyboard exported');
+  } else {
+    const pw=window.open('','_blank');
+    if(pw){
+      pw.document.write(html);pw.document.close();
+      pw.onload=function(){setTimeout(()=>{pw.print()},600)};
+      toast('Print dialog opening...');
+    } else {
+      toast('Pop-ups blocked — please enable and retry');
+    }
+  }
+};
+</script>
+
+<!-- COLUMN REFERENCE MODAL -->
+<div class="ref-modal" id="refModal" onclick="if(event.target===this)this.classList.remove('on')">
+<div class="ref-box">
+<div class="ref-hdr"><h2>&#128214; Column Reference</h2><button class="ref-close" onclick="document.getElementById('refModal').classList.remove('on')">&#10005;</button></div>
+<div class="ref-body">
+<div class="ref-grp"><div class="ref-grp-title" style="background:#2F5496">Flow Columns (A–E) — always fill</div>
+<div class="ref-row"><span class="ref-col">A</span><span class="ref-field">Step_ID</span><span class="ref-desc">Unique step identifier. Used as target in Next and Actions.</span></div>
+<div class="ref-row"><span class="ref-col">B</span><span class="ref-field">Step_Description</span><span class="ref-desc">Display label on flowchart node.</span></div>
+<div class="ref-row"><span class="ref-col">C</span><span class="ref-field">Step_Type</span><span class="ref-desc">START, END, ACTION, SELECT, DECISION, PARALLEL_SPLIT, PARALLEL_JOIN, LOOP_RETURN, SIGNATURE, SUBPROCESS</span></div>
+<div class="ref-row"><span class="ref-col">D</span><span class="ref-field">Next</span><span class="ref-desc">Smart routing. <span class="ref-syntax">STEP_ID</span> sequential · <span class="ref-syntax">Y:ID | N:ID</span> decision · <span class="ref-syntax">|| ID1, ID2</span> parallel · <span class="ref-syntax">>> ID</span> loop · blank = end. On a <span class="ref-syntax">SELECT</span> step: <span class="ref-syntax">Label1:ID1 | Label2:ID2 | …</span> labelled branches (use <span class="ref-syntax">Label:>> ID</span> for a loop-back leg)</span></div>
+<div class="ref-row"><span class="ref-col">E</span><span class="ref-field">Phase</span><span class="ref-desc">Grouping name for Phase view subgraphs.</span></div></div>
+<div class="ref-grp"><div class="ref-grp-title" style="background:#7030A0">ISA-88 Columns (F–H) — Syncade hierarchy</div>
+<div class="ref-row"><span class="ref-col">F</span><span class="ref-field">UP</span><span class="ref-desc">Unit Procedure instance. <span class="ref-syntax">UP_EQUIP_CHECK:1</span></span></div>
+<div class="ref-row"><span class="ref-col">G</span><span class="ref-field">OP</span><span class="ref-desc">Operation instance. <span class="ref-syntax">OP_SCAN_EQUIP:3</span></span></div>
+<div class="ref-row"><span class="ref-col">H</span><span class="ref-field">EWI</span><span class="ref-desc">Electronic Work Instruction. <span class="ref-syntax">UI_SCAN_EQUIP</span></span></div></div>
+<div class="ref-grp"><div class="ref-grp-title" style="background:#1A7A1A">Screen Columns (I–N) — fill when step has a screen</div>
+<div class="ref-row"><span class="ref-col">I</span><span class="ref-field">Screen_Type</span><span class="ref-desc">Manual Instruction (yellow) · Scan / Parameter Entry (teal) · Auto System Step (yellow, centered) · Error Screen (teal, banner) · Dropdown Select (yellow) · End Screen (gray). <em>Presence of Screen_Type triggers wireframe — no separate Screen column needed.</em></span></div>
+<div class="ref-row"><span class="ref-col">J</span><span class="ref-field">Instructions</span><span class="ref-desc">One per line. <span class="ref-syntax">**bold prefix</span> for emphasis. <span class="ref-syntax">[TABLE] Title</span> for inline data tables (pipe-delimited, {restricted}/{unrestricted} cell styling).</span></div>
+<div class="ref-row"><span class="ref-col">K</span><span class="ref-field">Parameters</span><span class="ref-desc">Input: <span class="ref-syntax">*Scan Barcode</span> · Select: <span class="ref-syntax">*Select|Opt1,Opt2</span> · * = required</span></div>
+<div class="ref-row"><span class="ref-col">L</span><span class="ref-field">Signatures</span><span class="ref-desc"><span class="ref-syntax">Operator [Op]</span> · <span class="ref-syntax">Op + Verifier [Ver]</span> · <span class="ref-syntax">Op + Supervisor [Sup]</span></span></div>
+<div class="ref-row"><span class="ref-col">M</span><span class="ref-field">Actions</span><span class="ref-desc"><span class="ref-syntax">label → target</span> nav · <span class="ref-syntax">[S] Section</span> header · <span class="ref-syntax">[RETURN] target</span> error loop-back</span></div>
+<div class="ref-row"><span class="ref-col">N</span><span class="ref-field">Notes</span><span class="ref-desc">Req IDs, CO, Alias, QR. <span class="ref-syntax">Error:</span> prefix = error popup message.</span></div></div>
+<div class="ref-grp"><div class="ref-grp-title" style="background:#B45309">Indicator Columns (O–Q) — badge links in top-right corner</div>
+<div class="ref-row"><span class="ref-col">O</span><span class="ref-field">BoS</span><span class="ref-desc"><span class="ref-syntax">Y</span> = show red "Basis of Safety" link. Blank or N = hidden.</span></div>
+<div class="ref-row"><span class="ref-col">P</span><span class="ref-field">Hazard</span><span class="ref-desc"><span class="ref-syntax">Y</span> = show amber "Hazard Statement" link. Blank or N = hidden.</span></div>
+<div class="ref-row"><span class="ref-col">Q</span><span class="ref-field">SOP</span><span class="ref-desc">SOP number (e.g. <span class="ref-syntax">SOP-12345</span>). Displays as blue "SOP: SOP-12345" link. Blank = hidden.</span></div></div>
+<div class="ref-grp"><div class="ref-grp-title" style="background:#333">Step Type → Shape</div>
+<div class="ref-row"><span class="ref-field" style="color:#059669;min-width:140px">START</span><span class="ref-desc">Stadium — entry, flow-only</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#b91c1c;min-width:140px">END</span><span class="ref-desc">Double stadium — terminal</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#1d4ed8;min-width:140px">ACTION</span><span class="ref-desc">Rectangle — operator step</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#b45309;min-width:140px">DECISION</span><span class="ref-desc">Diamond — Y/N branch, flow-only</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#047857;min-width:140px">SUBPROCESS</span><span class="ref-desc">Rectangle — system/auto step</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#0f766e;min-width:140px">SIGNATURE</span><span class="ref-desc">Trapezoid — signature step</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#6d28d9;min-width:140px">PARALLEL_SPLIT/JOIN</span><span class="ref-desc">Double bracket — fork/sync</span></div>
+<div class="ref-row"><span class="ref-field" style="color:#b45309;min-width:140px">LOOP_RETURN</span><span class="ref-desc">Flag — loop back, flow-only</span></div></div>
+</div></div></div>
+
+<!-- SYNTAX GUIDE MODAL -->
+<div class="ref-modal" id="syntaxModal" onclick="if(event.target===this)this.classList.remove('on')">
+<div class="ref-box">
+<div class="ref-hdr"><h2>&#128221; Syntax Guide</h2><button class="ref-close" onclick="document.getElementById('syntaxModal').classList.remove('on')">&#10005;</button></div>
+<div class="ref-body">
+<div class="syn-section"><div class="syn-title">Instructions (col J)</div>
+<div class="syn-note">One per line. ** prefix = bold. [TABLE] = inline data table.</div>
+<div class="syn-example">Verify area is clear of obstructions.
+**Confirm area is safe for drum handling.
+Check reactor manway is open.
+
+[TABLE] Material Classification
+Material | Type | Status
+DMI-001 | API | {restricted}Restricted
+SOL-002 | Solvent | {unrestricted}Unrestricted
+EXC-003 | Excipient | {unrestricted}Unrestricted
+Instructions continue after the table.</div>
+<div class="syn-note"><strong>[TABLE]</strong> title on first line. Next pipe-delimited line = headers. Subsequent pipe lines = rows. <strong>{restricted}</strong> or <strong>{unrestricted}</strong> prefix = red/green cell styling. A non-pipe line ends the table.</div></div>
+<div class="syn-section"><div class="syn-title">Parameters (col K)</div>
+<div class="syn-note">Input: just the label. Select: label|options. * = required.</div>
+<div class="syn-example">*Scan Material Barcode             ← required text input
+*Gross Weight (kg)                 ← required numeric input
+Comments                           ← optional text input
+*Select Action|Re-scan,Abort       ← required dropdown
+*Location|Disp A,Disp B,Cold Store ← required dropdown</div></div>
+<div class="syn-section"><div class="syn-title">Signatures (col L)</div>
+<div class="syn-note">Bracket suffix = popup role.</div>
+<div class="syn-example">Operator [Op]           ← single sign, operator popup
+Op + Verifier [Ver]     ← dual sign, verifier popup
+Op + Supervisor [Sup]   ← dual sign, supervisor popup</div></div>
+<div class="syn-section"><div class="syn-title">Actions (col M)</div>
+<div class="syn-note">Nav links, section headers, error loop-backs.</div>
+<div class="syn-example">Submit Scan → MC_NEXT              ← navigation link
+[S] Supervisor Decision             ← bold section header
+Continue → MC_PROCEED               ← navigation link
+Abort → MC_END_ERR                  ← navigation link
+[RETURN] MC_SCAN                    ← error loop-back (amber)</div></div>
+<div class="syn-section"><div class="syn-title">Notes (col N)</div>
+<div class="syn-note">Free text. Error: prefix = popup message.</div>
+<div class="syn-example">Req: GCSP-40
+CO: OP_EQUIP_SCAN_CHECK_1
+Alias: MCF_DS_SKIDPREP_START
+QR: 2
+Executed By: Op
+Error: Material does not match BOM.  ← error popup
+(Evidence Required)</div></div>
+<div class="syn-section"><div class="syn-title">BoS / Hazard / SOP (cols O–Q)</div>
+<div class="syn-note">Indicator badges displayed as links in top-right corner of wireframe.</div>
+<div class="syn-example">BoS (col O):    Y or N     ← red "Basis of Safety" link
+Hazard (col P): Y or N     ← amber "Hazard Statement" link
+SOP (col Q):    SOP-12345  ← blue "SOP: SOP-12345" link
+                (blank)    ← hidden</div></div>
+<div class="syn-section"><div class="syn-title">Next (col D) — Routing</div>
+<div class="syn-example">MC_SCAN_DRUM                ← sequential
+Y:MC_WEIGHT | N:MC_ERR      ← decision
+|| MC_DCS, MC_MES, MC_LOG   ← parallel split
+>> MC_SCAN_DRUM              ← loop back
+Y:MC_NEXT | N:>> MC_PREV    ← decision + loop
+Re-write:>> MC_WRITE | Manual:MC_MANUAL  ← SELECT branches (Step_Type=SELECT)
+                             ← blank = END</div></div>
+<div class="syn-section"><div class="syn-title">ISA-88 Instances (cols F–G)</div>
+<div class="syn-example">UP_EQUIP_CHECK:1   ← 1st UP instance
+UP_EQUIP_CHECK:2   ← 2nd UP instance
+OP_SCAN_EQUIP:1    ← 1st scan operation
+OP_GET_CLASS:3     ← 3rd classification</div></div>
+</div></div></div>
+
+</body>
+</html>
